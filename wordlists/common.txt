@@ -1,0 +1,5 @@
+https://example.com
+https://test.com
+https://target.com/api
+https://vulnerable-site.com
+https://demo-app.com
