@@ -1,6 +1,3 @@
-Here's the complete `README.md` file for your repository:
-
-```markdown
 # cors - CORS Misconfiguration Scanner
 
 A simple and fast tool to detect CORS misconfigurations in web applications.
@@ -73,6 +70,7 @@ cors [OPTIONS]
 | -o, --output FILE | Save results to a file |
 | -c, --threads N | Number of concurrent threads (default: 10) |
 | -v, --version | Show version information |
+
 
 ### Usage Examples
 
