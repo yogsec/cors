@@ -12,6 +12,7 @@ A simple and fast tool to detect CORS misconfigurations in web applications.
 ```bash
 git clone https://github.com/yogsec/cors
 cd cors
+sudo chmod +x install.sh
 sudo ./install.sh
 ```
 
