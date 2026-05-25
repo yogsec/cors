@@ -1,0 +1,206 @@
+#!/bin/bash
+
+# Banner
+display_banner() {
+    echo "   ██████╗ ██████╗ ██████╗ ███████╗"
+    echo "  ██╔════╝██╔═══██╗██╔══██╗██╔════╝"
+    echo "  ██║     ██║   ██║██████╔╝███████╗"
+    echo "  ██║     ██║   ██║██╔══██╗╚════██║"
+    echo "  ╚██████╗╚██████╔╝██║  ██║███████║"
+    echo "   ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝"
+    echo ""
+}
+
+# Help section
+show_help() {
+    echo "Usage: cors [OPTIONS]"
+    echo ""
+    echo "OPTIONS:"
+    echo "  -h, --help              Show this help"
+    echo "  -u, --url <url>         Check single URL"
+    echo "  -w, --wordlist <file>   Scan URLs from file"
+    echo "  -o, --output <file>     Save output to file"
+    echo "  -c, --threads <n>       Concurrent threads (default: 10)"
+    echo "  -v, --version           Show version"
+    echo ""
+    echo "EXAMPLES:"
+    echo "  cors -u https://example.com"
+    echo "  cors -w urls.txt"
+    echo "  cors -w urls.txt -o results.txt -c 20"
+    echo ""
+    echo "REPORTING BUGS:"
+    echo "  https://github.com/yogsec/cors/issues"
+}
+
+version="1.0"
+output_file=""
+urls_file=""
+single_url=""
+threads=10
+origin="https://evil.com"
+
+# Check if running with no arguments
+if [ $# -eq 0 ]; then
+    display_banner
+    show_help
+    exit 0
+fi
+
+display_banner
+
+# Parse arguments
+while getopts "hu:w:o:c:v-:" opt; do
+    case $opt in
+        h)
+            show_help
+            exit 0
+            ;;
+        u)
+            single_url=$OPTARG
+            ;;
+        w)
+            urls_file=$OPTARG
+            ;;
+        o)
+            output_file=$OPTARG
+            ;;
+        c)
+            threads=$OPTARG
+            ;;
+        v)
+            echo "cors version: $version"
+            exit 0
+            ;;
+        -)
+            case "${OPTARG}" in
+                help)
+                    show_help
+                    exit 0
+                    ;;
+                url)
+                    single_url="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                wordlist)
+                    urls_file="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                output)
+                    output_file="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                threads)
+                    threads="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                version)
+                    echo "cors version: $version"
+                    exit 0
+                    ;;
+                *)
+                    echo "Invalid option: --${OPTARG}"
+                    show_help
+                    exit 1
+                    ;;
+            esac
+            ;;
+        *)
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# Check if both single URL and file are provided
+if [ -n "$single_url" ] && [ -n "$urls_file" ]; then
+    echo "Error: Use either -u OR -w, not both"
+    exit 1
+fi
+
+# Check if neither is provided
+if [ -z "$single_url" ] && [ -z "$urls_file" ]; then
+    echo "Error: Provide URL with -u or file with -w"
+    show_help
+    exit 1
+fi
+
+# Process single URL
+if [ -n "$single_url" ]; then
+    echo "[*] Checking: $single_url"
+    response=$(curl -s -o /dev/null -D - -H "Origin: $origin" "$single_url")
+    cors_header=$(echo "$response" | grep -i 'access-control-allow-origin')
+    allow_methods=$(echo "$response" | grep -i 'access-control-allow-methods')
+    allow_headers=$(echo "$response" | grep -i 'access-control-allow-headers')
+    allow_credentials=$(echo "$response" | grep -i 'access-control-allow-credentials')
+    
+    if [[ "$cors_header" =~ \* ]]; then
+        echo "[!] $single_url - Wildcard (*) in ACAO"
+    elif [[ "$cors_header" =~ "$origin" ]]; then
+        echo "[!] $single_url - Reflects origin in ACAO"
+    fi
+    
+    if [[ "$allow_methods" =~ "PUT" || "$allow_methods" =~ "DELETE" ]]; then
+        echo "[!] $single_url - Unsafe methods: $allow_methods"
+    fi
+    
+    if [[ "$allow_headers" =~ \* ]]; then
+        echo "[!] $single_url - Wildcard in ACAH"
+    fi
+    
+    if [[ "$allow_credentials" =~ "true" ]]; then
+        echo "[!] $single_url - Credentials enabled"
+    fi
+    
+    if [ -n "$output_file" ]; then
+        echo "[*] Results saved to $output_file"
+    fi
+    exit 0
+fi
+
+# Process file
+if [ ! -f "$urls_file" ]; then
+    echo "Error: File $urls_file not found"
+    exit 1
+fi
+
+# Function to process URL
+process_url() {
+    local url=$1
+    response=$(curl -s -o /dev/null -D - -H "Origin: $origin" "$url")
+    cors_header=$(echo "$response" | grep -i 'access-control-allow-origin')
+    allow_methods=$(echo "$response" | grep -i 'access-control-allow-methods')
+    allow_headers=$(echo "$response" | grep -i 'access-control-allow-headers')
+    allow_credentials=$(echo "$response" | grep -i 'access-control-allow-credentials')
+    
+    output=""
+    
+    if [[ "$cors_header" =~ \* ]]; then
+        output+="$url - Wildcard (*) in ACAO\n"
+    elif [[ "$cors_header" =~ "$origin" ]]; then
+        output+="$url - Reflects origin in ACAO\n"
+    fi
+    
+    if [[ "$allow_methods" =~ "PUT" || "$allow_methods" =~ "DELETE" ]]; then
+        output+="$url - Unsafe methods: $allow_methods\n"
+    fi
+    
+    if [[ "$allow_headers" =~ \* ]]; then
+        output+="$url - Wildcard in ACAH\n"
+    fi
+    
+    if [[ "$allow_credentials" =~ "true" ]]; then
+        output+="$url - Credentials enabled\n"
+    fi
+    
+    if [ -n "$output" ]; then
+        echo -e "$output"
+        if [ -n "$output_file" ]; then
+            echo -e "$output" >> "$output_file"
+        fi
+    fi
+}
+
+export -f process_url
+export origin
+export output_file
+
+echo "[*] Scanning $urls_file with $threads threads"
+cat "$urls_file" | xargs -P "$threads" -n 1 -I {} bash -c 'process_url "$@"' _ {}
+
+echo "[*] Scan completed"
