@@ -2,6 +2,8 @@
 
 A simple and fast tool to detect CORS misconfigurations in web applications.
 
+![cors.png](https://github.com/yogsec/cors/blob/main/cors.png?raw=true)
+
 ## INSTALLATION
 
 ### Method 1: Automatic Installation (Recommended)
