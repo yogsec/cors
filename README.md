@@ -1,6 +1,6 @@
 # cors - CORS Misconfiguration Scanner
 
-A simple and fast tool to detect CORS misconfigurations in web applications.
+A tool to detect CORS misconfigurations in web applications.
 
 ![cors.png](https://github.com/yogsec/cors/blob/main/cors.png?raw=true)
 
